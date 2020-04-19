@@ -23,6 +23,8 @@ import cvxopt
 from cvxopt import matrix as cvxopt_matrix
 from cvxopt import solvers as cvxopt_solvers
 import matplotlib.pylab as plt
+from datetime import datetime
+
 
 # Import Data
 data1 = pd.read_csv('prob1data.csv', header=None).values
@@ -45,10 +47,11 @@ def split_data(x, y):
 
 # Problem (1a)
 def LinearSVM_Primal(X, y, C):
+    start = datetime.now()
     # split and cluster the data frist.
     cluster_1, cluster_2 = split_data(X, y)
-    plt.scatter(cluster_1[:, 0], cluster_1[:, 1], color='blue')
-    plt.scatter(cluster_2[:, 0], cluster_2[:, 1], color='green')
+    plt.scatter(cluster_1[:, 0], cluster_1[:, 1])
+    plt.scatter(cluster_2[:, 0], cluster_2[:, 1])
 
     w = cp.Variable((2, 1))
     b = cp.Variable()
@@ -70,23 +73,27 @@ def LinearSVM_Primal(X, y, C):
     # Now, generate the line
     p = w.value
     q = b.value
-    print(p)
+    print("The value of w is: ", p)
+    print("The value of b is: ", q)
 
     x = np.linspace(-1, 5, 20)
-    plt.plot(x, (-q - (p[0]*x))/p[1])
+    plt.plot(x, (-q - (p[0]*x))/p[1], 'black')
+    plt.plot(x, (-q - (p[0] * x) + 1) / p[1], 'r--')
+    plt.plot(x, (-q - (p[0] * x) - 1) / p[1], 'r--')
     plt.show()
 
-LinearSVM_Primal(X,y,100)
+    return p, q, datetime.now()-start
 
 
-# return w, b, sol_time
-
+w, b, t = LinearSVM_Primal(X, y, 1)
 # # Compute the decision boundary
-# # -------- INSERT YOUR CODE HERE -------- #
-#
+print("The decision boundary of 1a is y=-0.35x+4.05\n")
 # # Compute the optimal support vectors
-# # -------- INSERT YOUR CODE HERE -------- #
-#
+print("The two sypport vector of 1a y=-0.35x+4.13; y=-0.35x+3.98\n")
+# Compute the computational time.
+print("The computational time of 1a is :", t, "\n")
+
+
 # # Problem (1b)
 #
 # def LinearSVM_Dual (X, y, C):
