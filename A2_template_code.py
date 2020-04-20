@@ -48,50 +48,33 @@ def split_data(x, y):
 # Problem (1a)
 def LinearSVM_Primal(X, y, C):
     start = datetime.now()
-    # split and cluster the data frist.
     cluster_1, cluster_2 = split_data(X, y)
-    plt.scatter(cluster_1[:, 0], cluster_1[:, 1])
-    plt.scatter(cluster_2[:, 0], cluster_2[:, 1])
-
-    w = cp.Variable((2, 1))
-    b = cp.Variable()
-    y_t = y.reshape(-1, 1)
-    x_constraint = [w.T * cluster_1[i] + b >= 1 for i in range(len(cluster_1))]
-    y_constraint = [w.T * cluster_2[i] + b <= -1 for i in range(len(cluster_2))]
-
-    constraint = x_constraint + y_constraint
     for i in range(len(y)):
         if y[i] == 0:
             y[i] = -1
-    loss = cp.sum(cp.pos(1 - cp.multiply(y_t, X @ w - b)))
-    reg = cp.norm(w, 1)
-    prob = cp.Problem(cp.Minimize(C * loss + 0.5 * reg), constraint)
-
+    D = X.shape[1]
+    N = X.shape[0]
+    W = cp.Variable(D)
+    b = cp.Variable()
+    loss = (0.5 * cp.sum_squares(W) + C * cp.sum(cp.pos(1 - cp.multiply(y, X * W + b))))
+    prob = cp.Problem(cp.Minimize(loss / N))
     prob.solve()
-    print("Problem Status: %s" %prob.status)
+    print(prob.status)
+    w = W.value
+    b = b.value
 
-    # Now, generate the line
-    p = w.value
-    q = b.value
-    print("The value of w is: ", p)
-    print("The value of b is: ", q)
-
+    # Plot the data and the line.
+    plt.scatter(cluster_1[:, 0], cluster_1[:, 1], color='blue')
+    plt.scatter(cluster_2[:, 0], cluster_2[:, 1], color='green')
     x = np.linspace(-1, 5, 20)
-    plt.plot(x, (-q - (p[0]*x))/p[1], 'black')
-    plt.plot(x, (-q - (p[0] * x) + 1) / p[1], 'r--')
-    plt.plot(x, (-q - (p[0] * x) - 1) / p[1], 'r--')
+    plt.plot(x, (-b - (w[0] * x)) / w[1], 'm')
     plt.show()
 
-    return p, q, datetime.now()-start
+    return w, b, datetime.now()-start
 
 
-w, b, t = LinearSVM_Primal(X, y, 1)
-# # Compute the decision boundary
-print("The decision boundary of 1a is y=-0.35x+4.05\n")
-# # Compute the optimal support vectors
-print("The two sypport vector of 1a y=-0.35x+4.13; y=-0.35x+3.98\n")
-# Compute the computational time.
-print("The computational time of 1a is :", t, "\n")
+print(LinearSVM_Primal(X, y, 1))
+
 
 
 # # Problem (1b)
