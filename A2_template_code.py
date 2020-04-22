@@ -23,7 +23,6 @@ import cvxopt
 from cvxopt import matrix as cvxopt_matrix
 from cvxopt import solvers as cvxopt_solvers
 import matplotlib.pylab as plt
-from datetime import datetime
 
 
 # Import Data
@@ -47,7 +46,7 @@ def split_data(x, y):
 
 # Problem (1a)
 def LinearSVM_Primal(X, y, C):
-    start = datetime.now()
+    start_time = time.time()
     cluster_1, cluster_2 = split_data(X, y)
     for i in range(len(y)):
         if y[i] == 0:
@@ -59,6 +58,7 @@ def LinearSVM_Primal(X, y, C):
     loss = (0.5 * cp.sum_squares(W) + C * cp.sum(cp.pos(1 - cp.multiply(y, X * W + b))))
     prob = cp.Problem(cp.Minimize(loss / N))
     prob.solve()
+    sol_time = time.time() - start_time
     print(prob.status)
     w = W.value
     b = b.value
@@ -70,47 +70,59 @@ def LinearSVM_Primal(X, y, C):
     plt.plot(x, (-b - (w[0] * x)) / w[1], 'm')
     plt.show()
 
-    return w, b, datetime.now()-start
+    return w, b, sol_time
 
 
-print(LinearSVM_Primal(X, y, 1))
-
+# print(LinearSVM_Primal(X, y, 1))
 
 
 # # Problem (1b)
-#
-# def LinearSVM_Dual (X, y, C):
-#
-#   n, p = X.shape
-#   y = y.reshape(-1,1) * 1.
-#   X_dash = y * X
-#   # Complete the following code:
-#   # cvxopt_solvers.qp(P, q, G, h, A, b)
-#   # objective:    (1/2) x^T P x + q^T x
-#   # constraints:  Gx < h
-#   #               Ax = b
-#   # example could be found here:
-#   # https://cvxopt.org/userguide/coneprog.html#quadratic-programming
-#
-#   P = cvxopt_matrix(# -- INSERT YOUR CODE HERE -- #)
-#   q = cvxopt_matrix(# -- INSERT YOUR CODE HERE -- #)
-#   G = cvxopt_matrix(# -- INSERT YOUR CODE HERE -- #)
-#   h = cvxopt_matrix(# -- INSERT YOUR CODE HERE -- #)
-#   A = cvxopt_matrix(# -- INSERT YOUR CODE HERE -- #)
-#   b = cvxopt_matrix(# -- INSERT YOUR CODE HERE -- #)
-#
-#   cvxopt_solvers.options['show_progress'] = False
-#   cvxopt_solvers.options['abstol'] = 1e-10
-#   cvxopt_solvers.options['reltol'] = 1e-10
-#   cvxopt_solvers.options['feastol'] = 1e-10
-#
-#   # -- INSERT YOUR CODE HERE -- #
-#   sol = cvxopt_solvers.qp(P, q, G, h, A, b)
-#   # -- INSERT YOUR CODE HERE -- #
-#   alphas = np.array(sol['x'])
-#
-#   return alphas, sol_time
-#
+def LinearSVM_Dual(X, y, C):
+    cluster_1, cluster_2 = split_data(X, y)
+    plt.scatter(cluster_1[:, 0], cluster_1[:, 1], color='blue')
+    plt.scatter(cluster_2[:, 0], cluster_2[:, 1], color='green')
+    for i in range(len(y)):
+        if y[i] == 0:
+            y[i] = -1
+    start_time = time.time()
+    n, p = X.shape
+    y = y.reshape(-1, 1) * 1.
+    X_dash = y * X
+
+    P = cvxopt_matrix(X_dash.dot(X_dash.T))
+    q = cvxopt_matrix(-np.ones((n, 1)))
+    G = cvxopt_matrix(np.vstack((-np.diag(np.ones(n)), np.identity(n))))
+    h = cvxopt_matrix(np.hstack((np.zeros(n), np.ones(n) * C)))
+    A = cvxopt_matrix(y.reshape(1, -1))
+    b = cvxopt_matrix(np.zeros(1))
+
+    cvxopt_solvers.options['show_progress'] = False
+    cvxopt_solvers.options['abstol'] = 1e-10
+    cvxopt_solvers.options['reltol'] = 1e-10
+    cvxopt_solvers.options['feastol'] = 1e-10
+
+    sol = cvxopt_solvers.qp(P, q, G, h, A, b)
+
+    alphas = np.array(sol['x'])
+    sol_time = time.time() - start_time
+    w = ((y * alphas).T @ X).reshape(-1, 1)
+
+    # Selecting the set of indices S corresponding to non zero parameters
+    S = (alphas > 1e-4).flatten()
+
+    # Computing b
+    b = y[S] - np.dot(X[S], w)
+    b = b[0]
+
+    # Display results
+    x = np.linspace(-1, 5, 20)
+    plt.plot(x, (-b - (w[0] * x)) / w[1], 'm')
+    plt.show()
+
+    return alphas, sol_time
+
+
+LinearSVM_Dual(X, y, 1)
 #
 # # Compute the decision boundary
 # # -------- INSERT YOUR CODE HERE -------- #
