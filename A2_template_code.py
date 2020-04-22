@@ -37,7 +37,7 @@ def split_data(x, y):
     temp_x = []
     temp_y = []
     for i in range(len(y)):
-        if y[i] == 0:
+        if y[i] == 1:
             temp_x.append(x[i].tolist())
         else:
             temp_y.append(x[i].tolist())
@@ -45,7 +45,7 @@ def split_data(x, y):
 
 
 # Problem (1a)
-def LinearSVM_Primal(X, y, C):
+def LinearSVM_Primal(X, y, C, iter=10000):
     start_time = time.time()
     cluster_1, cluster_2 = split_data(X, y)
     for i in range(len(y)):
@@ -57,7 +57,7 @@ def LinearSVM_Primal(X, y, C):
     b = cp.Variable()
     loss = (0.5 * cp.sum_squares(W) + C * cp.sum(cp.pos(1 - cp.multiply(y, X * W + b))))
     prob = cp.Problem(cp.Minimize(loss / N))
-    prob.solve()
+    prob.solve(max_iter=iter)
     sol_time = time.time() - start_time
     print(prob.status)
     w = W.value
@@ -66,14 +66,14 @@ def LinearSVM_Primal(X, y, C):
     # Plot the data and the line.
     plt.scatter(cluster_1[:, 0], cluster_1[:, 1], color='blue')
     plt.scatter(cluster_2[:, 0], cluster_2[:, 1], color='green')
-    x = np.linspace(-1, 5, 20)
+    x = np.linspace(-10, 10, 40)
     plt.plot(x, (-b - (w[0] * x)) / w[1], 'm')
     plt.show()
 
     return w, b, sol_time
 
 
-# print(LinearSVM_Primal(X, y, 1))
+# print(LinearSVM_Primal(X, y, 0))
 
 
 # # Problem (1b)
@@ -118,27 +118,21 @@ def LinearSVM_Dual(X, y, C):
     x = np.linspace(-1, 5, 20)
     plt.plot(x, (-b - (w[0] * x)) / w[1], 'm')
     plt.show()
-
     return alphas, sol_time
 
 
-LinearSVM_Dual(X, y, 1)
-#
-# # Compute the decision boundary
-# # -------- INSERT YOUR CODE HERE -------- #
-#
-# # Compute the optimal support vectors
-# # -------- INSERT YOUR CODE HERE -------- #
-#
-# # Problem (1d)
-# def Linearly_separable (X, y):
-#   # -------- INSERT YOUR CODE HERE -------- #
-#   #
-#   #
-#   # Output: sep = 1 if data linearly seperable
-#   #         sep = 0 if data not linearly seperable
-#
-#   return sep
+# print(LinearSVM_Dual(X, y, 1))
+
+
+# Problem (1d)
+def Linearly_separable (X, y):
+    w, b, t = LinearSVM_Primal(X, y, 1000, iter=1000000)
+    for i in range(len(X)):
+        if y[i] * (np.matmul(w.T, X[i]) + b) <= 1:
+            return 0
+    return 1
+
+
 #
 # # Problem (1f)
 #
@@ -251,3 +245,29 @@ LinearSVM_Dual(X, y, 1)
 #
 # # Compute prediction error ratio in test set
 # # -------- INSERT YOUR CODE HERE -------- #
+
+np.random.seed(1)
+n = 20
+m = 1000
+TEST = m
+DENSITY = 0.2
+beta_true = np.random.randn(n,1)
+idxs = np.random.choice(range(n), int((1-DENSITY)*n), replace=False)
+for idx in idxs:
+    beta_true[idx] = 0
+offset = 0
+sigma = 45
+X = np.random.normal(0, 5, size=(m,n))
+Y = np.sign(X.dot(beta_true) + offset + np.random.normal(0,sigma,size=(m,1)))
+X_test = np.random.normal(0, 5, size=(TEST,n))
+Y_test = np.sign(X_test.dot(beta_true) + offset + np.random.normal(0,sigma,size=(TEST,1)))
+
+cluster_1, cluster_2 = split_data(X, y)
+
+
+for i in range(len(y)):
+    if y[i] == -1:
+        y[i] = 0
+temp = np.squeeze(Y)
+print(temp.shape)
+print(Linearly_separable(X, temp))
