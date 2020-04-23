@@ -24,13 +24,15 @@ from cvxopt import matrix as cvxopt_matrix
 from cvxopt import solvers as cvxopt_solvers
 import matplotlib.pylab as plt
 
-
 # Import Data
 data1 = pd.read_csv('prob1data.csv', header=None).values
 X = data1[:, 0:2]
 y = data1[:, -1]
 
-# Hint: examine the data before you start coding SVM
+# Modify the data label into 1 and -1
+for i in range(len(y)):
+    if y[i] == 0:
+        y[i] = -1
 
 
 def split_data(x, y):
@@ -48,15 +50,12 @@ def split_data(x, y):
 def LinearSVM_Primal(X, y, C, iter=10000):
     start_time = time.time()
     cluster_1, cluster_2 = split_data(X, y)
-    for i in range(len(y)):
-        if y[i] == 0:
-            y[i] = -1
     D = X.shape[1]
     N = X.shape[0]
     W = cp.Variable(D)
     b = cp.Variable()
     loss = (0.5 * cp.sum_squares(W) + C * cp.sum(cp.pos(1 - cp.multiply(y, X * W + b))))
-    prob = cp.Problem(cp.Minimize(loss / N))
+    prob = cp.Problem(cp.Minimize(loss))
     prob.solve(max_iter=iter)
     sol_time = time.time() - start_time
     print(prob.status)
@@ -66,14 +65,14 @@ def LinearSVM_Primal(X, y, C, iter=10000):
     # Plot the data and the line.
     plt.scatter(cluster_1[:, 0], cluster_1[:, 1], color='blue')
     plt.scatter(cluster_2[:, 0], cluster_2[:, 1], color='green')
-    x = np.linspace(-10, 10, 40)
+    x = np.linspace(-1, 5, 20)
     plt.plot(x, (-b - (w[0] * x)) / w[1], 'm')
     plt.show()
 
     return w, b, sol_time
 
 
-# print(LinearSVM_Primal(X, y, 0))
+# print(LinearSVM_Primal(X, y, 1))
 
 
 # # Problem (1b)
@@ -81,9 +80,6 @@ def LinearSVM_Dual(X, y, C):
     cluster_1, cluster_2 = split_data(X, y)
     plt.scatter(cluster_1[:, 0], cluster_1[:, 1], color='blue')
     plt.scatter(cluster_2[:, 0], cluster_2[:, 1], color='green')
-    for i in range(len(y)):
-        if y[i] == 0:
-            y[i] = -1
     start_time = time.time()
     n, p = X.shape
     y = y.reshape(-1, 1) * 1.
@@ -125,7 +121,7 @@ def LinearSVM_Dual(X, y, C):
 
 
 # Problem (1d)
-def Linearly_separable (X, y):
+def Linearly_separable(X, y):
     w, b, t = LinearSVM_Primal(X, y, 1000, iter=1000000)
     for i in range(len(X)):
         if y[i] * (np.matmul(w.T, X[i]) + b) <= 1:
@@ -133,75 +129,111 @@ def Linearly_separable (X, y):
     return 1
 
 
-#
-# # Problem (1f)
-#
-# def l2_norm_LinearSVM_Primal (X, y, C):
-#   # -------- INSERT YOUR CODE HERE -------- #
-#   #
-#   #
-#
-#   return w, b, sol_time
-#
-# # Compute the decision boundary
-# # -------- INSERT YOUR CODE HERE -------- #
-#
-# # Compute the optimal support vectors
-# # -------- INSERT YOUR CODE HERE -------- #
-#
-# # Problem (1g)
-#
-# def l2_norm_LinearSVM_Dual (X, y, C):
-#   zero_tol = 1e-7
-#
-#   cvxopt_solvers.options['show_progress'] = False
-#   cvxopt_solvers.options['abstol'] = 1e-10
-#   cvxopt_solvers.options['reltol'] = 1e-10
-#   cvxopt_solvers.options['feastol'] = 1e-10
-#
-#   # -------- INSERT YOUR CODE HERE -------- #
-#   #
-#   #
-#
-#   sol = cvxopt_solvers.qp(P, q, G, h, A, b)
-#
-#   # -------- INSERT YOUR CODE HERE -------- #
-#   #
-#   #
-#
-#   return alphas, sol_time
-#
-# # Compute the decision boundary
-# # -------- INSERT YOUR CODE HERE -------- #
-#
-# # Compute the optimal support vectors
-# # -------- INSERT YOUR CODE HERE -------- #
-#
-# # Problem (1h)
-#
-# # Plot the decision boundaries and datapoints
-# # -------- INSERT YOUR CODE HERE -------- #
-#
+# Problem (1f)
+
+def l2_norm_LinearSVM_Primal(X, y, C):
+    start_time = time.time()
+    cluster_1, cluster_2 = split_data(X, y)
+
+    D = X.shape[1]
+    W = cp.Variable(D)
+    b = cp.Variable()
+    loss = cp.sum_squares(W) + C * cp.sum_squares(cp.pos(1 - cp.multiply(y, X * W + b)))
+    prob = cp.Problem(cp.Minimize(loss))
+    prob.solve()
+    sol_time = time.time() - start_time
+    print(prob.status)
+    w = W.value
+    b = b.value
+
+    # Plot the data and the line.
+    plt.scatter(cluster_1[:, 0], cluster_1[:, 1], color='blue')
+    plt.scatter(cluster_2[:, 0], cluster_2[:, 1], color='green')
+    x = np.linspace(-1, 5, 40)
+    plt.plot(x, (-b - (w[0] * x)) / w[1], 'm')
+    plt.show()
+    return w, b, sol_time
+
+
+# print(l2_norm_LinearSVM_Primal(X, y, 1))
+
+
+# Problem (1g)
+
+def l2_norm_LinearSVM_Dual(X, y, C):
+    zero_tol = 1e-4
+
+    cluster_1, cluster_2 = split_data(X, y)
+    plt.scatter(cluster_1[:, 0], cluster_1[:, 1], color='blue')
+    plt.scatter(cluster_2[:, 0], cluster_2[:, 1], color='green')
+    for i in range(len(y)):
+        if y[i] == 0:
+            y[i] = -1
+    start_time = time.time()
+    n, p = X.shape
+    y = y.reshape(-1, 1) * 1.
+    X_dash = y * X
+    extra_term = 1/C * np.identity(n)
+
+    P = cvxopt_matrix(X_dash.dot(X_dash.T)+extra_term)
+    q = cvxopt_matrix(-np.ones((n, 1)))
+    G = cvxopt_matrix(np.vstack((-np.diag(np.ones(n)))))
+    h = cvxopt_matrix(np.hstack((np.zeros(n))))
+    A = cvxopt_matrix(y.reshape(1, -1))
+    b = cvxopt_matrix(np.zeros(1))
+
+    cvxopt_solvers.options['show_progress'] = False
+    cvxopt_solvers.options['abstol'] = 1e-10
+    cvxopt_solvers.options['reltol'] = 1e-10
+    cvxopt_solvers.options['feastol'] = 1e-10
+
+    sol = cvxopt_solvers.qp(P, q, G, h, A, b)
+
+    alphas = np.array(sol['x'])
+    sol_time = time.time() - start_time
+    w = ((y * alphas).T @ X).reshape(-1, 1)
+
+    # Selecting the set of indices S corresponding to non zero parameters
+    S = (alphas > zero_tol).flatten()
+
+    # Computing b
+    b = y[S] - np.dot(X[S], w)
+    b = b[0]
+
+    # Display results
+    x = np.linspace(-1, 5, 20)
+    plt.plot(x, (-b - (w[0] * x)) / w[1], 'm')
+    plt.show()
+    return alphas, sol_time
+
+
+# print(l2_norm_LinearSVM_Dual(X, y, 1))
+
+
+# Problem (1h)
+cluster_1, cluster_2 = split_data(X, y)
+w1, b1, t1 = LinearSVM_Primal(X, y, 1)
+w2, b2, t2 = l2_norm_LinearSVM_Primal(X, y, 1)
+x = np.linspace(-1, 5, 40)
+plt.scatter(cluster_1[:, 0], cluster_1[:, 1], color='blue')
+plt.scatter(cluster_2[:, 0], cluster_2[:, 1], color='green')
+plt.plot(x, (-b1 - (w1[0] * x)) / w1[1], 'm', label="l1")
+plt.plot(x, (-b2 - (w2[0] * x)) / w2[1], 'r', label="l2")
+plt.legend()
+plt.show()
+
 # """
 # Problem 2: Kernal Support Vector Machine and Application
 # """
 #
 #
-# # Import libraries
-# from numpy import *
-# import pandas as pd
-# from sklearn.metrics.pairwise import euclidean_distances
-# from sklearn.model_selection import train_test_split
-# from sklearn.svm import SVC
-# from sklearn import preprocessing
-#
-# import matplotlib.pylab as plt
+
 #
 # data2 = pd.read_csv('prob2data.csv',header=None).values
 # X = data2[:,0:2]
 # y = data2[:,-1]
 # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state = 2020)
-#
+
 # # Problem (2a)
 #
 # def gaussian_kernal(sigma):
@@ -245,29 +277,3 @@ def Linearly_separable (X, y):
 #
 # # Compute prediction error ratio in test set
 # # -------- INSERT YOUR CODE HERE -------- #
-
-np.random.seed(1)
-n = 20
-m = 1000
-TEST = m
-DENSITY = 0.2
-beta_true = np.random.randn(n,1)
-idxs = np.random.choice(range(n), int((1-DENSITY)*n), replace=False)
-for idx in idxs:
-    beta_true[idx] = 0
-offset = 0
-sigma = 45
-X = np.random.normal(0, 5, size=(m,n))
-Y = np.sign(X.dot(beta_true) + offset + np.random.normal(0,sigma,size=(m,1)))
-X_test = np.random.normal(0, 5, size=(TEST,n))
-Y_test = np.sign(X_test.dot(beta_true) + offset + np.random.normal(0,sigma,size=(TEST,1)))
-
-cluster_1, cluster_2 = split_data(X, y)
-
-
-for i in range(len(y)):
-    if y[i] == -1:
-        y[i] = 0
-temp = np.squeeze(Y)
-print(temp.shape)
-print(Linearly_separable(X, temp))
