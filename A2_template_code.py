@@ -211,69 +211,70 @@ def l2_norm_LinearSVM_Dual(X, y, C):
 
 
 # Problem (1h)
-cluster_1, cluster_2 = split_data(X, y)
-w1, b1, t1 = LinearSVM_Primal(X, y, 1)
-w2, b2, t2 = l2_norm_LinearSVM_Primal(X, y, 1)
-x = np.linspace(-1, 5, 40)
-plt.scatter(cluster_1[:, 0], cluster_1[:, 1], color='blue')
-plt.scatter(cluster_2[:, 0], cluster_2[:, 1], color='green')
-plt.plot(x, (-b1 - (w1[0] * x)) / w1[1], 'm', label="l1")
-plt.plot(x, (-b2 - (w2[0] * x)) / w2[1], 'r', label="l2")
-plt.legend()
-plt.show()
+def plot_l1_l2_difference():
+    cluster_1, cluster_2 = split_data(X, y)
+    w1, b1, t1 = LinearSVM_Primal(X, y, 1)
+    w2, b2, t2 = l2_norm_LinearSVM_Primal(X, y, 1)
+    x = np.linspace(-1, 5, 40)
+    plt.scatter(cluster_1[:, 0], cluster_1[:, 1], color='blue')
+    plt.scatter(cluster_2[:, 0], cluster_2[:, 1], color='green')
+    plt.plot(x, (-b1 - (w1[0] * x)) / w1[1], 'm', label="l1")
+    plt.plot(x, (-b2 - (w2[0] * x)) / w2[1], 'r', label="l2")
+    plt.legend()
+    plt.show()
 
-# """
-# Problem 2: Kernal Support Vector Machine and Application
-# """
-#
-#
 
-#
-# data2 = pd.read_csv('prob2data.csv',header=None).values
-# X = data2[:,0:2]
-# y = data2[:,-1]
-# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state = 2020)
+"""
+Problem 2: Kernal Support Vector Machine and Application
+"""
+# Import libraries
+from sklearn.metrics.pairwise import euclidean_distances
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
+from sklearn import preprocessing
+import pickle
+data2 = pd.read_csv('prob2data.csv', header=None).values
+X = data2[:, 0:2]
+y = data2[:, -1]
 
-# # Problem (2a)
-#
-# def gaussian_kernal(sigma):
-#     def gaussian_kernel_sigma(x1, x2):
-#         # -------- INSERT YOUR CODE HERE -------- #
-#         return # -------- INSERT YOUR CODE HERE -------- #
-#     return gaussian_kernel_sigma
-#
-# # Problem (2b)
-#
-# kernel_SVM = SVC(# -- INSERT YOUR CODE HERE -- #)
-#
-# # Compute # of optimal support vectors
-# # -- INSERT YOUR CODE HERE -- #
-#
-# # Compute prediction error ratio in test set
-# # -- INSERT YOUR CODE HERE -- #
-#
-# # Plot the decision boundary with all datapoints
-# # -- INSERT YOUR CODE HERE -- #
-#
-# # Import data for (2c) - (2e)
-# data3 = pd.read_csv('votes.csv')
-# X = data3[['white','black','poverty','density','bachelor','highschool','age65plus','income','age18under','population2014']]
-# X = X.values
-# X = preprocessing.scale(X)
-#
-# # Problem (2c)
-# y = # -- INSERT YOUR CODE HERE -- #
-#
-# # Train / test split for (2d) - (2e)
-# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state = 2020)
-#
-# # Problem (2d)
-#
-# # You may use SVC from sklearn.svm
-# # -------- INSERT YOUR CODE HERE -------- #
-#
-# # Compute # of optimal support vectors
-# # -------- INSERT YOUR CODE HERE -------- #
-#
-# # Compute prediction error ratio in test set
-# # -------- INSERT YOUR CODE HERE -------- #
+for i in range(len(y)):
+    if y[i] != 1:
+        y[i] = -1
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=2020)
+
+
+
+def gaussianKernelGramMatrixFull(X1, X2, sigma=0.1):
+    """(Pre)calculates Gram Matrix K"""
+
+    gram_matrix = np.zeros((X1.shape[0], X2.shape[0]))
+    for i, x1 in enumerate(X1):
+        for j, x2 in enumerate(X2):
+            x1 = x1.flatten()
+            x2 = x2.flatten()
+            gram_matrix[i, j] = np.exp(- np.sum(np.power((x1 - x2), 2)) / float(2*(sigma**2)))
+    return gram_matrix
+
+
+def customized_kernel_svm():
+    clf = SVC(C=1, kernel="precomputed")
+    model = clf.fit(gaussianKernelGramMatrixFull(X_train, X_train), y_train)
+
+    # Visual the data
+    x1s = np.linspace(min(X_train[:, 0]), max(X_train[:, 0]), 300)
+    x2s = np.linspace(min(X_train[:, 1]), max(X_train[:, 1]), 300)
+    points = np.array([[x1, x2] for x1 in x1s for x2 in x2s])
+
+    dist_bias = clf.decision_function(gaussianKernelGramMatrixFull(points, X_train))
+
+    bounds_bias = np.array([pt for pt, dist in zip(points, dist_bias) if abs(dist) < 0.05])
+    plt.scatter(X_train[:, 0], X_train[:, 1], color=["r" if item == 1 else "b" for item in y_train], label="data")
+    plt.scatter(bounds_bias[:, 0], bounds_bias[:, 1], s=1,  color="g", label="decision boundary")
+    plt.show()
+
+
+# -------------------------------- Votes --------------------------------
+data3 = pd.read_csv('votes.csv', header=None).values
+X = data2[:, 0:2]
+y = data2[:, -1]
